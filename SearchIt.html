@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SearchIt — AyU$#</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Inter:wght@300;400;500;600&family=Lora:ital@0;1&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:        #0f1b2d;
+      --ink-soft:   #2c3e55;
+      --gold:       #c8963e;
+      --gold-light: #f0d090;
+      --parchment:  #faf6ef;
+      --paper:      #ffffff;
+      --mist:       #e8e2d9;
+      --caption:    #7a7060;
+      --radius:     18px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--parchment);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      background: var(--ink);
+      padding: 28px 24px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, #1e3a5f 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.6rem;
+      font-weight: 700;
+      color: white;
+      position: relative;
+    }
+
+    .logo span { color: var(--gold); }
+
+    .tagline {
+      font-family: 'Lora', serif;
+      font-style: italic;
+      font-size: 0.95rem;
+      color: var(--gold-light);
+      margin-top: 6px;
+      position: relative;
+    }
+
+    .search-wrapper {
+      width: 100%;
+      max-width: 700px;
+      padding: 40px 20px 20px;
+    }
+
+    .search-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--caption);
+      margin-bottom: 10px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    #searchInput {
+      flex: 1;
+      padding: 16px 20px;
+      font-family: 'Lora', serif;
+      font-size: 1.05rem;
+      border: 2px solid var(--mist);
+      border-radius: var(--radius);
+      background: white;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #searchInput::placeholder { color: #b0a898; font-style: italic; }
+
+    #searchInput:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(200,150,62,0.12);
+    }
+
+    #searchBtn {
+      padding: 0 26px;
+      background: var(--gold);
+      color: var(--ink);
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #searchBtn:hover { background: #b5822e; }
+    #searchBtn:active { transform: scale(0.97); }
+
+    .suggestions {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .suggestions span {
+      font-size: 0.78rem;
+      color: var(--caption);
+    }
+
+    .chip {
+      background: white;
+      border: 1.5px solid var(--mist);
+      color: var(--ink-soft);
+      font-size: 0.82rem;
+      padding: 5px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .chip:hover { border-color: var(--gold); color: var(--gold); }
+
+    main {
+      width: 100%;
+      max-width: 700px;
+      padding: 0 20px 60px;
+      flex: 1;
+    }
+
+    #state-idle, #state-loading, #state-error, #state-result { display: none; }
+    #state-idle { display: block; }
+
+    .idle-illustration { margin-top: 40px; text-align: center; }
+    .idle-illustration svg { opacity: 0.18; }
+
+    .idle-text {
+      margin-top: 20px;
+      font-family: 'Lora', serif;
+      font-style: italic;
+      color: var(--caption);
+      font-size: 1rem;
+      line-height: 1.7;
+      text-align: center;
+    }
+
+    #state-loading { text-align: center; padding-top: 60px; }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--mist);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-family: 'Lora', serif;
+      font-style: italic;
+      color: var(--caption);
+      font-size: 0.95rem;
+    }
+
+    #state-error {
+      margin-top: 40px;
+      background: #fff5f5;
+      border: 1.5px solid #f5c6c6;
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      color: #8b3030;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    #state-error strong { display: block; margin-bottom: 6px; }
+
+    #state-result { animation: riseIn 0.4s ease both; }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-card {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: 0 2px 8px rgba(15,27,45,0.06), 0 12px 40px rgba(15,27,45,0.07);
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .card-header {
+      background: var(--ink);
+      padding: 28px 32px 24px;
+      position: relative;
+    }
+
+    .card-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+    }
+
+    .card-eyebrow {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: white;
+      line-height: 1.2;
+    }
+
+    .card-body {
+      padding: 28px 32px;
+    }
+
+    .card-body::after { content: ''; display: table; clear: both; }
+
+    .card-image-wrap {
+      float: right;
+      margin: 0 0 16px 24px;
+      max-width: 180px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+
+    .card-image-wrap img { width: 100%; height: auto; display: block; }
+
+    .card-summary {
+      font-family: 'Lora', serif;
+      font-size: 1.02rem;
+      line-height: 1.82;
+      color: var(--ink-soft);
+    }
+
+    .card-summary p { margin-bottom: 14px; }
+    .card-summary p:last-child { margin-bottom: 0; }
+
+    .section-block {
+      margin-top: 22px;
+      padding-top: 22px;
+      border-top: 1.5px solid var(--mist);
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 10px;
+    }
+
+    .card-footer {
+      padding: 18px 32px;
+      border-top: 1.5px solid var(--mist);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: #fdfcfa;
+    }
+
+    .card-footer-note {
+      font-size: 0.8rem;
+      color: var(--caption);
+      font-style: italic;
+    }
+
+    .wiki-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--ink);
+      text-decoration: none;
+      border: 1.5px solid var(--ink);
+      padding: 7px 16px;
+      border-radius: 999px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .wiki-link:hover { background: var(--ink); color: white; }
+
+    @media (max-width: 520px) {
+      .logo { font-size: 2rem; }
+      .card-header { padding: 22px; }
+      .card-title { font-size: 1.5rem; }
+      .card-body { padding: 22px; }
+      .card-footer { padding: 16px 22px; }
+      .card-image-wrap { max-width: 120px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SearchIT -<span>AyU$#</span></div>
+  <div class="tagline">Illuminate any idea, instantly</div>
+</header>
+
+<div class="search-wrapper">
+  <div class="search-label">What would you like to explore?</div>
+  <div class="search-row">
+    <input
+      id="searchInput"
+      type="text"
+      placeholder="e.g. Black hole, Renaissance, Quantum physics…"
+      autocomplete="off"
+    />
+    <button id="searchBtn" onclick="search()">
+      🔍 Explore
+    </button>
+  </div>
+  <div class="suggestions">
+    <span>Try:</span>
+    <div class="chip" onclick="searchTerm('Artificial Intelligence')">Artificial Intelligence</div>
+    <div class="chip" onclick="searchTerm('Black Hole')">Black Hole</div>
+    <div class="chip" onclick="searchTerm('Renaissance')">Renaissance</div>
+    <div class="chip" onclick="searchTerm('DNA')">DNA</div>
+    <div class="chip" onclick="searchTerm('Mahatma Gandhi')">Mahatma Gandhi</div>
+    <div class="chip" onclick="searchTerm('Photosynthesis')">Photosynthesis</div>
+  </div>
+</div>
+
+<main>
+
+  <div id="state-idle">
+    <div class="idle-illustration">
+      <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+        <rect x="20" y="15" width="55" height="75" rx="5" fill="#0f1b2d"/>
+        <rect x="30" y="28" width="35" height="4" rx="2" fill="#c8963e"/>
+        <rect x="30" y="38" width="35" height="3" rx="1.5" fill="#c8963e" opacity=".5"/>
+        <rect x="30" y="46" width="25" height="3" rx="1.5" fill="#c8963e" opacity=".35"/>
+        <rect x="30" y="54" width="30" height="3" rx="1.5" fill="#c8963e" opacity=".25"/>
+        <circle cx="82" cy="80" r="22" fill="none" stroke="#0f1b2d" stroke-width="5"/>
+        <line x1="98" y1="96" x2="108" y2="106" stroke="#0f1b2d" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <p class="idle-text">Enter any topic above — a person, concept, place, or event —<br/>and WikiLens will surface its Wikipedia explanation for you.</p>
+  </div>
+
+  <div id="state-loading">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">Searching the encyclopedia…</div>
+  </div>
+
+  <div id="state-error">
+    <strong id="errorTitle">Nothing found</strong>
+    <span id="errorMsg">We couldn't find a Wikipedia article for that topic.</span>
+  </div>
+
+  <div id="state-result">
+    <div class="result-card">
+      <div class="card-header">
+        <div class="card-eyebrow">Wikipedia · Encyclopedia</div>
+        <div class="card-title" id="resultTitle"></div>
+      </div>
+      <div class="card-body" id="resultBody"></div>
+      <div class="card-footer">
+        <div class="card-footer-note">Source: Wikipedia, the free encyclopedia</div>
+        <a id="resultLink" href="#" target="_blank" class="wiki-link">Full article ↗</a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const input = document.getElementById('searchInput');
+  const states = ['idle', 'loading', 'error', 'result'];
+
+  function showState(name) {
+    states.forEach(s => {
+      document.getElementById('state-' + s).style.display = s === name ? 'block' : 'none';
+    });
+  }
+
+  function searchTerm(term) {
+    input.value = term;
+    search();
+  }
+
+  async function search() {
+    const query = input.value.trim();
+    if (!query) { input.focus(); return; }
+
+    showState('loading');
+    document.getElementById('loadingText').textContent = `Exploring "${query}"…`;
+
+    try {
+      // Find best matching article
+      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=1&format=json&origin=*`;
+      const searchRes = await fetch(searchUrl);
+      const searchData = await searchRes.json();
+      const hits = searchData.query.search;
+
+      if (!hits || hits.length === 0) {
+        showState('error');
+        document.getElementById('errorTitle').textContent = `No results for "${query}"`;
+        document.getElementById('errorMsg').textContent = 'Try a different spelling or a broader term.';
+        return;
+      }
+
+      const pageTitle = hits[0].title;
+
+      // Fetch summary + thumbnail
+      const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`;
+      const summaryRes = await fetch(summaryUrl);
+      const data = await summaryRes.json();
+
+      if (!data.extract) {
+        showState('error');
+        document.getElementById('errorTitle').textContent = 'No summary available';
+        document.getElementById('errorMsg').textContent = 'Try a more specific search term.';
+        return;
+      }
+
+      renderResult(data);
+
+    } catch (err) {
+      showState('error');
+      document.getElementById('errorTitle').textContent = 'Connection problem';
+      document.getElementById('errorMsg').textContent = 'Could not reach Wikipedia. Check your internet connection.';
+    }
+  }
+
+  function renderResult(data) {
+    document.getElementById('resultTitle').textContent = data.title;
+    document.getElementById('resultLink').href =
+      data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(data.title)}`;
+
+    const body = document.getElementById('resultBody');
+    const paragraphs = (data.extract || '').split('\n').filter(p => p.trim());
+    const imgSrc = data.thumbnail?.source;
+
+    let html = '';
+
+    if (imgSrc) {
+      html += `<div class="card-image-wrap">
+        <img src="${imgSrc}" alt="${data.title}" loading="lazy"/>
+      </div>`;
+    }
+
+    html += `<div class="card-summary"><p>${esc(paragraphs[0] || '')}</p></div>`;
+
+    if (paragraphs.length > 1) {
+      html += `<div class="section-block">
+        <div class="section-title">More detail</div>
+        <div class="card-summary">`;
+      paragraphs.slice(1).forEach(p => { html += `<p>${esc(p)}</p>`; });
+      html += `</div></div>`;
+    }
+
+    body.innerHTML = html;
+    showState('result');
+    document.getElementById('state-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function esc(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+</script>
+</body>
+</html>
